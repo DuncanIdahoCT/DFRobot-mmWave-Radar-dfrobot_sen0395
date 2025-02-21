@@ -43,6 +43,12 @@ globals: #such as...
 
 Technically, settings are set just fine using the built-in component dfrobot_sen0395 but I find it's odd limitations to be... limiting lol so I just use the tried and trusted - uart.write: method but to make it clear what settings a unit has, the global flash stow and restore functions come in quite handy
 
+You'll also notice that the led switch never really worked well in previous itterations so I've changed it to also use a global flash option. On reboot the swtich position will be saved and restored via global custom flash attribute.
+
+As documented, some switches don't behave correctly during reboot and so the native flash save for switch position is disabled via:
+```
+restore_mode: DISABLED
+```
 
 ### Installation:
  * Download the file and copy them (keeping their subfolder paths) into your Home Assistant config/esphome main folder:
