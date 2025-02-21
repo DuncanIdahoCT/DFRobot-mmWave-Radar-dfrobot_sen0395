@@ -6,3 +6,6 @@ https://esphome.io/guides/contributing#a-note-about-custom-components
 
 The (very limited) built-in component for the dfrobot_sen0395 module
 https://github.com/esphome/esphome/tree/dev/esphome/components/dfrobot_sen0395
+
+This is a working example of one of my units that I've applied this change to and am testing to see how it works over time:
+  https://github.com/DuncanIdahoCT/espresence-occupancy-nightlight-multi-sensor
