@@ -23,7 +23,7 @@ The installation below is largely the same as previous projects I've posted here
       return {};
     sensors:
   ```
- elemination of include.h (CPP) code file dependancy and removal of all leapmmw app references:
+ elemination of include.h (CPP) code file dependancy and removal of all leapmmw(getmmwConf) app references:
 ```
 leapmmw(id(uart_bus)).getmmwConf("getRange");
 leapmmw(id(uart_bus)).getmmwConf("getLatency");
