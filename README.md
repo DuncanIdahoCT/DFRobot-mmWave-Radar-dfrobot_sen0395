@@ -32,6 +32,7 @@ leapmmw(id(uart_bus)).getmmwConf("getLedMode 1");
 ```
 
 
+
 ### Installation:
  * Download the file and copy them (keeping their subfolder paths) into your Home Assistant config/esphome main folder:
 
