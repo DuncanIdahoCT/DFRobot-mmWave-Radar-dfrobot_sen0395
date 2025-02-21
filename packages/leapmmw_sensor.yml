@@ -1,0 +1,173 @@
+esphome:
+  name: ${device_name}
+
+# Establish flash globals and initial values (not needed, just set your preferences first time after flash)
+globals:
+  # distance
+  - id: distance_flash
+    type: float
+    restore_value: true
+    #initial_value: '9.45'
+  # latency
+  - id: latency_flash
+    type: float
+    restore_value: true
+    #initial_value: '5'
+  # sensitivity
+  - id: sensitivity_flash
+    type: float
+    restore_value: true
+    #initial_value: '7'
+  # led
+  - id: led_flash
+    type: bool
+    restore_value: true
+    #initial_value: true
+
+logger:
+  logs:
+    sensor: INFO # reduced logging to minimize web_server target overload..
+
+uart:
+  id: uart_bus
+  tx_pin: ${uart_tx_pin}
+  rx_pin: ${uart_rx_pin}
+  baud_rate: 115200
+
+binary_sensor:
+  - platform: gpio
+    name: "${room} mmWave"
+    id: mmwave_presence_detection
+    device_class: motion
+    pin:
+      number: ${gpio_pin}
+      mode: INPUT_PULLDOWN
+    # when motion is detected, the radar sensor is on so publish radar state to HA
+    on_press:
+      then:
+        lambda: !lambda |-
+          if (!id(mmwave_sensor).state) {
+            id(mmwave_sensor).publish_state(true);
+          }
+
+switch:
+  - platform: safe_mode
+    name: use_safe_mode
+
+  - platform: template
+    name: mmwave_sensor
+    id: mmwave_sensor # do not change
+    entity_category: config
+    restore_mode: ALWAYS_ON
+    optimistic: true
+    turn_on_action:
+      - uart.write: "setUartOutput 1 0"
+      - delay: 1s
+      - uart.write: "saveConfig"
+      - delay: 4s 
+      - uart.write: "sensorStart"
+    turn_off_action:
+      - uart.write: "sensorStop"
+      - delay: 2s
+
+  - platform: template
+    name: led
+    id: led  # do not change
+    entity_category: config
+    restore_mode: DISABLED
+    lambda: return id(led_flash);
+    turn_on_action:
+      - switch.turn_off: mmwave_sensor
+      - delay: 2s
+      - uart.write: "setLedMode 1 0"
+      - delay: 3s
+      - lambda: id(led_flash) = true;
+      - delay: 2s 
+      - switch.turn_on: mmwave_sensor
+    turn_off_action:
+      - switch.turn_off: mmwave_sensor
+      - delay: 2s
+      - uart.write: "setLedMode 1 1"
+      - delay: 3s
+      - lambda: id(led_flash) = false;
+      - delay: 2s
+      - switch.turn_on: mmwave_sensor 
+
+number:
+  - platform: template
+    name: distance
+    id: distance # do not change
+    entity_category: config
+    min_value: 0.15
+    max_value: 9.45
+    step: 0.15
+    unit_of_measurement: M
+    mode: box
+    lambda: return id(distance_flash);
+    set_action:
+      - switch.turn_off: mmwave_sensor
+      - delay: 2s
+      - uart.write: !lambda
+          std::string range = "setRange 0 " + str_sprintf("%.2f", x);
+          return std::vector<unsigned char>(range.begin(), range.end());
+      - lambda: id(distance_flash) = x;
+      - delay: 3s
+      - switch.turn_on: mmwave_sensor 
+
+  - platform: template
+    name: latency
+    id: latency # do not change
+    entity_category: config
+    min_value: 1
+    max_value: 600
+    step: 1
+    unit_of_measurement: s
+    mode: box
+    lambda: return id(latency_flash);
+    set_action:
+      - switch.turn_off: mmwave_sensor
+      - delay: 2s
+      - uart.write: !lambda
+          std::string setL = "setLatency 0.1 " + str_sprintf("%.0f", x);
+          return std::vector<unsigned char>(setL.begin(), setL.end());
+      - lambda: id(latency_flash) = x;
+      - delay: 3s
+      - switch.turn_on: mmwave_sensor
+
+  - platform: template
+    name: sensitivity
+    id: sensitivity # do not change
+    entity_category: config
+    min_value: 0
+    max_value: 9
+    step: 1
+    lambda: return id(sensitivity_flash);
+    set_action:
+      - switch.turn_off: mmwave_sensor
+      - delay: 2s
+      - uart.write: !lambda
+          std::string mss = "setSensitivity " + to_string((int)x);
+          return std::vector<unsigned char>(mss.begin(), mss.end());
+      - lambda: id(sensitivity_flash) = x;
+      - delay: 3s
+      - switch.turn_on: mmwave_sensor
+
+button:
+  - platform: restart
+    name: Restart_ESP_${device_name}
+    entity_category: diagnostic
+    on_press:
+      - uart.write:
+          id: uart_bus
+          data: "resetSystem 0"
+
+  - platform: template
+    name: factory_reset_mmwMCU_${device_name}
+    id: factory_reset_mmwMCU
+    entity_category: diagnostic
+    on_press:
+      - switch.turn_off: mmwave_sensor
+      - delay: 2s
+      - uart.write: "resetCfg"
+      - delay: 3s
+      - switch.turn_on: mmwave_sensor
