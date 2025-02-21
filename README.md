@@ -41,6 +41,7 @@ globals: #such as...
     #initial_value: '9.45'
 ```
 
+Technically, settings are set just fine using the built-in component dfrobot_sen0395 but I find it's odd limitations to be... limiting lol so I just use the tried and trusted - uart.write: method but to make it clear what settings a unit has, the global flash stow and restore functions come in quite handy
 
 
 ### Installation:
