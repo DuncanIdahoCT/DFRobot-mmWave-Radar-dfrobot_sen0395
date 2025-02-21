@@ -11,10 +11,10 @@ This is a working example of one of my units that I've applied this change to an
   https://github.com/DuncanIdahoCT/espresence-occupancy-nightlight-multi-sensor
 
 ### Installation:
- * Download these files and copy them (keeping their subfolder paths) into your Home Assistant config/esphome main folder:
+ * Download the file and copy them (keeping their subfolder paths) into your Home Assistant config/esphome main folder:
 
    ```
-   header/leapmmw_sensor.h
+   ** header/leapmmw_sensor.h ** - no longer needed
    
    packages/leapmmw_sensor.yml
    ```
