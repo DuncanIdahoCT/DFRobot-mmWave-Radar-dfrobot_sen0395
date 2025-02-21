@@ -10,11 +10,26 @@ https://github.com/esphome/esphome/tree/dev/esphome/components/dfrobot_sen0395
 This is a working example of one of my units that I've applied this change to and am testing to see how it works over time:
   https://github.com/DuncanIdahoCT/espresence-occupancy-nightlight-multi-sensor
 
+The installation below is largely the same as previous projects I've posted here. The notable changes are in the yaml files:
+  Removal of the entire custom component including the include.h (CPP) code file dependancy
+
+  ```
+  sensor:      
+  - platform: custom
+    lambda: |-
+      auto s = new leapmmw(id(uart_bus));
+      App.register_component(s);
+      return {};
+    sensors:
+  ```
+
+
+
 ### Installation:
  * Download the file and copy them (keeping their subfolder paths) into your Home Assistant config/esphome main folder:
 
    ```
-   ** header/leapmmw_sensor.h ** - no longer needed
+   ** header/leapmmw_sensor.h ** - no longer needed due to removal of the custom component
    
    packages/leapmmw_sensor.yml
    ```
