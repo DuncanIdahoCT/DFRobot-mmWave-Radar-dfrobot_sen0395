@@ -23,12 +23,22 @@ The installation below is largely the same as previous projects I've posted here
       return {};
     sensors:
   ```
- elemination of include.h (CPP) code file dependancy and removal of all leapmmw(getmmwConf) app references:
+ Elemination of include.h (CPP) code file dependancy and removal of all leapmmw(getmmwConf) app references:
 ```
 leapmmw(id(uart_bus)).getmmwConf("getRange");
 leapmmw(id(uart_bus)).getmmwConf("getLatency");
 leapmmw(id(uart_bus)).getmmwConf("getSensitivity");
 leapmmw(id(uart_bus)).getmmwConf("getLedMode 1");
+```
+ Usage of global flash variables to allow settings to persist after reboot:
+```
+globals:
+
+...# distance
+  - id: distance_flash
+    type: float
+    restore_value: true
+    #initial_value: '9.45'...
 ```
 
 
