@@ -1,4 +1,4 @@
-# DFRobot-mmWave-Radar-dfrobot_sen0395-
+# DFRobot mmWave Radar (dfrobot_sen0395)
 ## This repository seeks to address the breaking change in esphome 2025.2 where the ability to use custom components, in this case mmWave sensors, were removed causing the typical use of most ESP MCU based mmWave modules to fail update in ESPHome Device Builder
 
 The change notes from ESPHome:
