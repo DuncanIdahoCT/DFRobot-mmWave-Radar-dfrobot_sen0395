@@ -33,12 +33,12 @@ leapmmw(id(uart_bus)).getmmwConf("getLedMode 1");
  Usage of global flash variables to allow settings to persist after reboot:
 ```
 globals:
-
-...# distance
+  #such as...
+# distance
   - id: distance_flash
     type: float
     restore_value: true
-    #initial_value: '9.45'...
+    #initial_value: '9.45'
 ```
 
 
