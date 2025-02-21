@@ -11,8 +11,9 @@ This is a working example of one of my units that I've applied this change to an
   https://github.com/DuncanIdahoCT/espresence-occupancy-nightlight-multi-sensor
 
 The installation below is largely the same as previous projects I've posted here. The notable changes are in the yaml files:
-  Removal of the entire custom component including the include.h (CPP) code file dependancy
 
+  
+  Removal of the entire custom component:
   ```
   sensor:      
   - platform: custom
@@ -22,7 +23,13 @@ The installation below is largely the same as previous projects I've posted here
       return {};
     sensors:
   ```
-
+ elemination of include.h (CPP) code file dependancy and removal of all leapmmw app references:
+```
+leapmmw(id(uart_bus)).getmmwConf("getRange");
+leapmmw(id(uart_bus)).getmmwConf("getLatency");
+leapmmw(id(uart_bus)).getmmwConf("getSensitivity");
+leapmmw(id(uart_bus)).getmmwConf("getLedMode 1");
+```
 
 
 ### Installation:
