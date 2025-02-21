@@ -5,3 +5,4 @@ This repository seeks to address the breaking change in esphome 2025.2 where the
 
 https://esphome.io/guides/contributing#a-note-about-custom-components
 
+https://github.com/esphome/esphome/tree/dev/esphome/components/dfrobot_sen0395
