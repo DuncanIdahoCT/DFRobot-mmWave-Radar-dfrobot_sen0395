@@ -1,7 +1,7 @@
 # DFRobot mmWave Radar (dfrobot_sen0395)
 ### This repository seeks to address the breaking change in esphome 2025.2 where the ability to use custom components, in this case mmWave sensors, were removed causing the typical use of most ESP MCU based mmWave modules to fail update in ESPHome Device Builder.
 
-My initial solution (see ![see here](/Initial%20Solution.md)) was a bit of a hack job/workaround but I've now managed to get back full functionality by refactoring the c++ code that we've all known and loved for the DFRobot (sen0395) mmWave modules. There is zero loss of original functionality and once again, it's possible to query the modules settings and switch states instead of blind setting or toggling switch states which is both bad for the module (see MFGR note on limited writes to module) and also not very clean as far as knowing what the actual setting is vs. just blind fire changing it and hoping it worked.
+My initial solution (see [see here](/Initial%20Solution.md)) was a bit of a hack job/workaround but I've now managed to get back full functionality by refactoring the c++ code that we've all known and loved for the DFRobot (sen0395) mmWave modules. There is zero loss of original functionality and once again, it's possible to query the modules settings and switch states instead of blind setting or toggling switch states which is both bad for the module (see MFGR note on limited writes to module) and also not very clean as far as knowing what the actual setting is vs. just blind fire changing it and hoping it worked.
 
 The (very limited) built-in component for the dfrobot_sen0395 module
 https://github.com/esphome/esphome/tree/dev/esphome/components/dfrobot_sen0395
