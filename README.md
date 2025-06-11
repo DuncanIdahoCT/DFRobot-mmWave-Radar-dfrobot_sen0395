@@ -1,20 +1,19 @@
 # DFRobot mmWave Radar (dfrobot_sen0395)
 ### This repository seeks to address the breaking change in esphome 2025.2 where the ability to use custom components, in this case mmWave sensors, were removed causing the typical use of most ESP MCU based mmWave modules to fail update in ESPHome Device Builder.
-There has been a built-in component (dfrobot_sen0395) to work with the sensor but it has some fairly odd limitations and odd behaviors with how you interact and control the module plus seemingly no way to read settings even though it does use UART... so instead I've made a bit of a hybrid test here that still uses simple UART messages to send configuration and diagnostic commands to the DFRobot radar module, but since reading back messages requires elements of the custom component which is now not possible without refactoring or finding a true "External Component" we simply forego reading the settings from the module and instead store the last updated setting in the ESP MCU flash-and restore them to the device card/web portal upon power up or reboot of the MCU. The settings themselves aren't lost once set, but if you have played with the ESPHome built-in dfrobot_sen0395 component or looked at it's underlying code, you've no doubt noticed it has no get- method only set-. Once set they persist but you have no way using this built-in component to "see" they are set, the swtiches, sliders, and numbers boxes default to blank/zero/off.
 
-The change notes from ESPHome:
-https://esphome.io/guides/contributing#a-note-about-custom-components
+My initial solution (see ![see here](/Initial%20Solution.md)) was a bit of a hack job/workaround but I've now managed to get back full functionality by refactoring the c++ code that we've all known and loved for the DFRobot (sen0395) mmWave modules. There is zero loss of original functionality and once again, it's possible to query the modules settings and switch states instead of blind setting or toggling switch states which is both bad for the module (see MFGR note on limited writes to module) and also not very clean as far as knowing what the actual setting is vs. just blind fire changing it and hoping it worked.
 
 The (very limited) built-in component for the dfrobot_sen0395 module
 https://github.com/esphome/esphome/tree/dev/esphome/components/dfrobot_sen0395
 
-This is a working example of one of my units that I've applied this change to and am testing to see how it works over time:
-  https://github.com/DuncanIdahoCT/espresence-occupancy-nightlight-multi-sensor
+The change notes from ESPHome:
+https://esphome.io/guides/contributing#a-note-about-custom-components
 
-The installation below is largely the same as previous projects I've posted here. The notable changes are in the yaml files:
+The installation below is largely the same as previous projects I've posted here. The notable changes are in the yaml file and now the creation of an external component structure and python init file along with header and c++ source:
 
+The notable changes to yaml are...
   
-  Removal of the entire custom component:
+  Removal of the deprecated custom component:
   ```
   sensor:      
   - platform: custom
@@ -24,40 +23,35 @@ The installation below is largely the same as previous projects I've posted here
       return {};
     sensors:
   ```
- Elimination of include.h (CPP) code file dependency and removal of all leapmmw(getmmwConf) app references:
+ Removal of package references and the header_file "substitution" variable along with include references:
+```
+packages:
+  inclusions: !include packages/leapmmw_sensor.yml
+header_file: header/leapmmw_sensor.h
+esphome:
+  name: ${device_name}
+  includes:
+    - ${header_file}
+```
+ As before, the "custom" component (now a proper external component) now allows all get/set methods:
 ```
 leapmmw(id(uart_bus)).getmmwConf("getRange");
 leapmmw(id(uart_bus)).getmmwConf("getLatency");
 leapmmw(id(uart_bus)).getmmwConf("getSensitivity");
 leapmmw(id(uart_bus)).getmmwConf("getLedMode 1");
 ```
- Usage of global flash variables to allow settings to persist after reboot:
-```
-globals: #such as...
-
-# distance
-  - id: distance_flash
-    type: float
-    restore_value: true
-    #initial_value: '9.45'
-```
-
-Technically, settings are set just fine using the built-in component dfrobot_sen0395 but I find it's odd limitations to be... limiting lol so I just use the tried and trusted - uart.write: method but to make it clear what settings a unit has, the global flash stow and restore functions come in quite handy
-
-You'll also notice that the led switch never really worked well in previous iterations, so I've changed it to also use a global flash option. On reboot the switch position will be saved and restored via global custom flash attribute.
-
-As documented, some switches don't behave correctly during reboot and so the native flash save for switch position is disabled via:
-```
-restore_mode: DISABLED
-```
 
 ### Installation:
- * Download the file and copy them (keeping their subfolder paths) into your Home Assistant config/esphome main folder:
+ * Download the files and copy them (keeping their subfolder paths) into your Home Assistant config/esphome main folder:
 
    ```
-   ** header/leapmmw_sensor.h ** - no longer needed due to removal of the custom component
-   
-   packages/leapmmw_sensor.yml
+   root_esphome_folder_path
+   ├── espresence-occupancy-nightlight-multi-sensor.yaml
+   └── external_components
+       └── leapmmw
+           ├── __init__.py
+           ├── leapmmw.h
+           └── leapmmw.cpp
    ```
  
  * In Home Assistant add-on, click ESPHome>open web gui and create a new device choosing the "continue" option and give it a name such as:
@@ -145,10 +139,6 @@ A couple notes:
     esp32:
       board: m5stack-atom
   
-  And the framework when you're using/if you choose to use BLE/BT shoudl be esp-idf, not arduino
+  And the framework when you're using/if you choose to use BLE/BT should be esp-idf, not arduino
     framework:
       type: esp-idf
-
-# Comments are welcome
-
-I've only created a few projects here now, so I'm happy to hear any suggestions.
