@@ -4,7 +4,6 @@ from esphome.components import uart
 from esphome.const import CONF_ID
 
 DEPENDENCIES = ['uart']
-CODEOWNERS = ['@yourname']  # Replace with your GitHub username
 
 leapmmw_ns = cg.esphome_ns.namespace('leapmmw')
 LeapMMW = leapmmw_ns.class_('LeapMMW', cg.Component, uart.UARTDevice)
