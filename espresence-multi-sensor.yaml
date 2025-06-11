@@ -16,11 +16,122 @@ substitutions:
   # RX Pin configured for a D1 Mini stacked setup
   gpio_pin: GPIO25
 
-# include the yml file with the sensor configuration
-packages:
-  inclusions: !include packages/leapmmw_sensor.yml
+esphome:
+  name: $device_name
+# This ESP32 device has the ability to act as a bluetooth proxy unlike many ESP32 MCUs
+# which can do either WiFi or BT but not both... a common issue!
+#
+#  project:
+#    name: esphome.bluetooth-proxy
+#    version: "1.0"
+#
+# dashboard_import:
+#   package_import_url: github://esphome/firmware/bluetooth-proxy/esp32-generic.yaml@main
+#
+# esp32_ble_tracker:
+#   scan_parameters:
+#     # We currently use the defaults to ensure Bluetooth
+#     # can co-exist with WiFi In the future we may be able to
+#     # enable the built-in coexistence logic in ESP-IDF
+#     active: true
+#
+#  bluetooth_proxy:
+#    active: true
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: esp-idf
+
+# An MCU feature specific to this type of m5stack-atom
+# Provided so you can turn it off basically
+light:
+  - platform: esp32_rmt_led_strip
+    chipset: SK6812
+    rgb_order: GRB
+    pin: 27
+    num_leds: 1
+    #rmt_channel: 0
+    name: "Atom LED"
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "your-key-here"
+
+ota:
+  platform: esphome
+  password: "your-password-here"
+
+# Connect to WiFi & create captive portal and web server
+wifi:
+  ssid: "${ssid}"
+  password: "${wifi_password}"
+  # use_address: x.x.x.x <-this is just in case you have issues with local.hostname (mDNS) resolution and require direct IP for image upload
+  # the above does not actually set a static IP, it's strictly for installing the MCU (ESPHome) image via direct IP
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "${device_name}"
+    password: "${wifi_password}"
+
+web_server:
+  port: 80
+  version: 2
+  include_internal: true
+
+http_request:
+  useragent: esphome/$device_name
+  verify_ssl: false
+  timeout: 2s
+
+logger:
+  logs:
+    sensor: INFO # reduced logging to minimize web_server target overload..
+
+uart:
+  id: uart_bus
+  tx_pin: ${uart_tx_pin}
+  rx_pin: ${uart_rx_pin}
+  baud_rate: 115200
+
+# External components - double-check all your paths!
+#
+# your_esphome_root_folder
+# ├── espresence-occupancy-nightlight-multi-sensor.yaml
+# └── external_components
+#     └── leapmmw
+#         ├── __init__.py
+#         ├── leapmmw.h
+#         └── leapmmw.cpp
+#
+external_components:
+  - source:
+      type: local
+      path: external_components
+
+# External Component "sensor"
+leapmmw:
+  id: mmw_sensor
+  uart_id: uart_bus
 
 binary_sensor:
+  # The most basic function of the DFRobot mmWave module, a GPIO pulldown (binary) sensor
+  - platform: gpio
+    name: "${room} mmWave"
+    id: mmwave_presence_detection
+    device_class: motion
+    pin:
+      number: ${gpio_pin}
+      mode: INPUT_PULLDOWN
+    # when motion is detected, the radar sensor is on so publish radar state to HA
+    on_press:
+      then:
+        lambda: !lambda |-
+          if (!id(mmwave_sensor).state) {
+            id(mmwave_sensor).publish_state(true);
+          }
+  # Here is where the fast motion (PIR) sensor is added as a binary sensor
   - platform: gpio
     pin:
       number: 33
@@ -30,6 +141,7 @@ binary_sensor:
     device_class: motion
     filters:
       - delayed_off: 10s
+  # this templated sensor ties both the above binary sensors together to show true occupancy
   - platform: template
     name: ${room} Occupancy
     id: occupancy
@@ -47,59 +159,127 @@ binary_sensor:
         return id(occupancy).state;
       }
 
-esphome:
-  name: $device_name
-  project:
-    name: esphome.bluetooth-proxy
-    version: "1.0"
+switch:
+  - platform: safe_mode
+    name: use_safe_mode
 
-esp32:
-  board: m5stack-atom
-  framework:
-    type: esp-idf
+  - platform: template
+    name: mmwave_sensor
+    id: mmwave_sensor # do not change
+    entity_category: config
+    optimistic: true
+    turn_on_action:
+      - uart.write: "setUartOutput 1 0"
+      - delay: 1s
+      - uart.write: "saveConfig"
+      - delay: 4s 
+      - uart.write: "sensorStart"
+    turn_off_action:
+      - uart.write: "sensorStop"
+      - delay: 2s
 
-# Set flash values storage intervals
-preferences:
-  flash_write_interval: 60s
+  - platform: template
+    name: led
+    id: led  # do not change
+    entity_category: config
+    optimistic: true
+    turn_on_action:
+      - switch.turn_off: mmwave_sensor
+      - delay: 2s
+      - uart.write: "setLedMode 1 0"
+      - delay: 3s
+      - lambda: |-
+          id(mmw_sensor).getmmwConf("getLedMode 1");
+      - delay: 2s 
+      - switch.turn_on: mmwave_sensor
+    turn_off_action:
+      - switch.turn_off: mmwave_sensor
+      - delay: 2s
+      - uart.write: "setLedMode 1 1"
+      - delay: 3s
+      - lambda: |-
+          id(mmw_sensor).getmmwConf("getLedMode 1");
+      - delay: 2s
+      - switch.turn_on: mmwave_sensor 
 
-# Enable Home Assistant API
-api:
-  encryption:
-    key: "your-key-here"
+number:
+  - platform: template
+    name: distance
+    id: distance # do not change
+    entity_category: config
+    min_value: 0.15
+    max_value: 9.45
+    step: 0.15
+    unit_of_measurement: M
+    mode: box
+    lambda: |-
+      id(mmw_sensor).getmmwConf("getRange");
+      return {};
+    set_action:
+      - switch.turn_off: mmwave_sensor
+      - delay: 2s
+      - uart.write: !lambda
+          std::string range = "setRange 0 " + str_sprintf("%.2f", x);
+          return std::vector<unsigned char>(range.begin(), range.end());
+      - delay: 3s
+      - switch.turn_on: mmwave_sensor 
+      
+  - platform: template
+    name: latency
+    id: latency # do not change
+    entity_category: config
+    min_value: 1
+    max_value: 600
+    lambda: |-
+      id(mmw_sensor).getmmwConf("getLatency");
+      return {};
+    step: 1
+    unit_of_measurement: s
+    mode: box
+    set_action:
+      - switch.turn_off: mmwave_sensor
+      - delay: 2s
+      - uart.write: !lambda
+          std::string setL = "setLatency 0.1 " + str_sprintf("%.0f", x);
+          return std::vector<unsigned char>(setL.begin(), setL.end());
+      - delay: 3s
+      - switch.turn_on: mmwave_sensor
 
-ota:
-  platform: esphome
-  password: "your-password-here"
+  - platform: template
+    name: sensitivity
+    id: sensitivity # do not change
+    entity_category: config
+    min_value: 0
+    max_value: 9
+    lambda: |-
+      id(mmw_sensor).getmmwConf("getSensitivity");
+      return {};
+    step: 1
+    set_action:
+      - switch.turn_off: mmwave_sensor
+      - delay: 2s
+      - uart.write: !lambda
+          std::string mss = "setSensitivity " + to_string((int)x);
+          return std::vector<unsigned char>(mss.begin(), mss.end());
+      - delay: 3s
+      - switch.turn_on: mmwave_sensor
 
-dashboard_import:
-  package_import_url: github://esphome/firmware/bluetooth-proxy/esp32-generic.yaml@main
+button:
+  - platform: restart
+    name: Restart_ESP_${device_name}
+    entity_category: diagnostic
+    on_press:
+      - uart.write:
+          id: uart_bus
+          data: "resetSystem 0"
 
-esp32_ble_tracker:
-  scan_parameters:
-    # We currently use the defaults to ensure Bluetooth
-    # can co-exist with WiFi In the future we may be able to
-    # enable the built-in coexistence logic in ESP-IDF
-    active: true
-
-bluetooth_proxy:
-  active: true
-
-# Connect to WiFi & create captive portal and web server
-wifi:
-  ssid: "${ssid}"
-  password: "${wifi_password}"
-  # use_address: 192.168.1.34
-
-web_server:
-  port: 80
-  version: 2
-  include_internal: true
-
-light:
-  - platform: esp32_rmt_led_strip
-    chipset: SK6812
-    rgb_order: GRB
-    pin: 27
-    num_leds: 1
-    #rmt_channel: 0
-    name: "Atom LED"
+  - platform: template
+    name: factory_reset_mmwMCU_${device_name}
+    id: factory_reset_mmwMCU
+    entity_category: diagnostic
+    on_press:
+      - switch.turn_off: mmwave_sensor
+      - delay: 2s
+      - uart.write: "resetCfg"
+      - delay: 3s
+      - switch.turn_on: mmwave_sensor
