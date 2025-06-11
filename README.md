@@ -33,12 +33,12 @@ esphome:
   includes:
     - ${header_file}
 ```
- As before, the "custom" component (now a proper external component) now allows all get/set methods:
+ As before, the "custom" component (now a proper external component) allows all get/set methods:
 ```
-leapmmw(id(uart_bus)).getmmwConf("getRange");
-leapmmw(id(uart_bus)).getmmwConf("getLatency");
-leapmmw(id(uart_bus)).getmmwConf("getSensitivity");
-leapmmw(id(uart_bus)).getmmwConf("getLedMode 1");
+id(mmw_sensor).getmmwConf("getSensitivity")
+id(mmw_sensor).getmmwConf("getRange")
+id(mmw_sensor).getmmwConf("getLatency")
+id(mmw_sensor).getmmwConf("getLedMode")
 ```
 
 ### Installation:
